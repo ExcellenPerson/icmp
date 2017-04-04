@@ -6,15 +6,18 @@
  *
  *
  */
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
+#include <unistd.h>
 #include <string.h>
+
 #include <sys/fcntl.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
+
 
 #include "icmp_packet.h"
 #include "ip_packet.h"
@@ -90,6 +93,7 @@ int main(int argc, char *argv[]){
   /* send icmp echo request */
   send_icmp_echorequest(icmp_sock, &src, &dest);
 
+  close(icmp_sock);
   printf("Sent ICMP echo-request to %s\n", target_host);
   fflush(stdout);
   return 0;
