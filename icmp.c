@@ -15,40 +15,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
-#define IPHDR_SIZE  sizeof(struct ip_packet_t)
-#define ICMPHDR_SIZE  sizeof(struct icmp_packet_t)
 
-struct icmp_packet_t {
-  uint8_t   type, code;
-  uint16_t  checksum, identifier, seq;};
-
-struct ip_packet_t {
-        uint8_t   vers_ihl,
-	          tos;  
-        uint16_t  pkt_len,
-	          id,
-	          flags_frag_offset;
-        uint8_t   ttl,
-	          proto;  // 1 for ICMP                                           
-        uint16_t  checksum;
-        uint32_t  src_ip,
-	          dst_ip;};
+#include "icmp_packet.h"
+#include "ip_packet.h"
 
 unsigned const int one = 1;
-
-
-/* Calculate ICMP checksum */
-uint16_t calc_icmp_checksum(uint16_t *data,
-			    int bytes){
-  uint32_t sum;
-  int i;
-  sum = 0;
-  for (i=0;i<bytes/2;i++) {
-    sum += data[i];}
-  sum = (sum & 0xFFFF) + (sum >> 16);
-  sum = htons(0xFFFF - sum);
-  return sum;}
-
 
 /* create ICMP socket */ 
 int create_icmp_socket(){
@@ -60,39 +31,6 @@ int create_icmp_socket(){
   setsockopt(icmp_sock, SOL_SOCKET, SO_BROADCAST, (char *)&one, sizeof(one));
   setsockopt(icmp_sock, IPPROTO_IP, IP_HDRINCL,(char *)&one, sizeof(one));
   return icmp_sock;}
-
-
-/* load ICMP echo req*/
-int load_icmp_echo_request( struct icmp_packet_t *pkt){
-  memset(pkt, 0, ICMPHDR_SIZE);
-  pkt->type = 8;//icmp echo request
-  pkt->code = 0; // no code
-  pkt->identifier = 0;
-  pkt->seq = 0;
-  pkt->checksum = 0;
-  pkt->checksum = htons(calc_icmp_checksum((uint16_t*)pkt, ICMPHDR_SIZE));
-  return 1;}
-
-
-/* load IP packet with ICMP proto  */
-int load_ip_packet_for_icmp( struct ip_packet_t *ip_pkt,
-			     struct sockaddr_in *rsrc,
-			     struct sockaddr_in *dest_addr){
-  //make sure ip_pkt has malloc(IPHDR_SIZE + ICMPHDR_SIZE)
-  int pkt_len = IPHDR_SIZE + ICMPHDR_SIZE;
-  memset(ip_pkt, 0, pkt_len);
-  ip_pkt->vers_ihl = 0x45;
-  ip_pkt->tos = 0;
-  ip_pkt->pkt_len = pkt_len;
-  ip_pkt->id = 1; //kernel sets proper value htons(ip_id_counter);
-  ip_pkt->flags_frag_offset = 0;
-  ip_pkt->ttl = IPDEFTTL; // default time to live (64)
-  ip_pkt->proto = 1; // ICMP
-  ip_pkt->checksum = 0; // maybe the kernel helps us out..?
-  ip_pkt->src_ip = rsrc->sin_addr.s_addr; // insert source IP address here
-  ip_pkt->dst_ip = dest_addr->sin_addr.s_addr;
-  return 1;}
-
 
 /* given a src and dest and open icmp socket, send echo-request */
 int send_icmp_echorequest( int icmp_sock,
