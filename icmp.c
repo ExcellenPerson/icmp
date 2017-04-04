@@ -13,8 +13,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/fcntl.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
 //#include "packet.h"
