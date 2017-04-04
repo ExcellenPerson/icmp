@@ -5,9 +5,6 @@
  * april 4 2017
  *
  *
- * 
- *
- *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,37 +15,26 @@
 #include <arpa/inet.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
-//#include "packet.h"
-unsigned const int one = 1;
-
-struct icmp_packet_t {
-  uint8_t   type, code;
-  uint16_t  checksum, identifier, seq;
-};
-
-
-struct ip_packet_t {
-        uint8_t   vers_ihl,
-	          tos;
-  
-        uint16_t  pkt_len,
-	          id,
-	          flags_frag_offset;
-
-        uint8_t   ttl,
-	          proto;  // 1 for ICMP                                           
-
-        uint16_t  checksum;
-
-        uint32_t  src_ip,
-	          dst_ip;
-};
-
 #define IPHDR_SIZE  sizeof(struct ip_packet_t)
 #define ICMPHDR_SIZE  sizeof(struct icmp_packet_t)
 
+struct icmp_packet_t {
+  uint8_t   type, code;
+  uint16_t  checksum, identifier, seq;};
 
+struct ip_packet_t {
+        uint8_t   vers_ihl,
+	          tos;  
+        uint16_t  pkt_len,
+	          id,
+	          flags_frag_offset;
+        uint8_t   ttl,
+	          proto;  // 1 for ICMP                                           
+        uint16_t  checksum;
+        uint32_t  src_ip,
+	          dst_ip;};
 
+unsigned const int one = 1;
 
 
 /* Calculate ICMP checksum */
@@ -58,11 +44,11 @@ uint16_t calc_icmp_checksum(uint16_t *data,
   int i;
   sum = 0;
   for (i=0;i<bytes/2;i++) {
-    sum += data[i];
-  }
+    sum += data[i];}
   sum = (sum & 0xFFFF) + (sum >> 16);
   sum = htons(0xFFFF - sum);
   return sum;}
+
 
 /* create ICMP socket */ 
 int create_icmp_socket(){
@@ -75,6 +61,7 @@ int create_icmp_socket(){
   setsockopt(icmp_sock, IPPROTO_IP, IP_HDRINCL,(char *)&one, sizeof(one));
   return icmp_sock;}
 
+
 /* load ICMP echo req*/
 int load_icmp_echo_request( struct icmp_packet_t *pkt){
   memset(pkt, 0, ICMPHDR_SIZE);
@@ -85,6 +72,7 @@ int load_icmp_echo_request( struct icmp_packet_t *pkt){
   pkt->checksum = 0;
   pkt->checksum = htons(calc_icmp_checksum((uint16_t*)pkt, ICMPHDR_SIZE));
   return 1;}
+
 
 /* load IP packet with ICMP proto  */
 int load_ip_packet_for_icmp( struct ip_packet_t *ip_pkt,
@@ -105,11 +93,11 @@ int load_ip_packet_for_icmp( struct ip_packet_t *ip_pkt,
   ip_pkt->dst_ip = dest_addr->sin_addr.s_addr;
   return 1;}
 
-/* */
+
+/* given a src and dest and open icmp socket, send echo-request */
 int send_icmp_echorequest( int icmp_sock,
 			   struct sockaddr_in *src_addr,
 			   struct sockaddr_in *dest_addr){
-
   struct ip_packet_t* ip_pkt;
   struct icmp_packet_t* icmp_pkt;
   int pkt_len = IPHDR_SIZE + ICMPHDR_SIZE, err = 0;
@@ -125,41 +113,34 @@ int send_icmp_echorequest( int icmp_sock,
 	       (struct sockaddr*)dest_addr,
 	       sizeof(struct sockaddr));
   free(packet);
-  
   if (err < 0) {
     printf("Failed to send ICMP packet: %s\n", strerror(errno));
     exit(1);}
   else if (err != pkt_len){
     printf("didn't send entire packet\n");
     exit(1);}
-
-  return 0;
-}
-
-
-
-int load_src(){
-  return 0;
-}
+  return 0;}
 
 int main(int argc, char *argv[]){
-  printf("usage: ./icmp <ip_address>\n");fflush(stdout);
   
-  char *lhost, *lport, *phost, *pport, *rhost, *rport;
-  char pport_s[6] = "2222";
-  int i=0;
-  uint32_t timeexc_ip;
-  int icmp_sock = 0;
-  struct sockaddr_in src, dest, rsrc;
+  struct sockaddr_in src, dest;
+  char *target_host;
+  int icmp_sock;
+  
+  printf("usage: sudo ./icmp <ip4_address>\n");
+  
+  /* read cmd line arg */
+  target_host = argv[1];
+  
+  /* clear src,dest structs */
   memset(&src, 0, sizeof(struct sockaddr_in));
-  phost = "8.8.8.8";//"75.102.136.100";
-  phost = argv[1];
-  
   memset(&dest, 0, sizeof(struct sockaddr_in));
-
+  
+  /* fill out dest struct */
   dest.sin_family        = AF_INET;
   dest.sin_port          = 0;
-  inet_pton(AF_INET, phost, &dest.sin_addr);
+  inet_pton(AF_INET, target_host, &dest.sin_addr);
+
   /* open raw socket */
   icmp_sock = create_icmp_socket();
 
@@ -170,7 +151,8 @@ int main(int argc, char *argv[]){
   
   /* send icmp echo request */
   send_icmp_echorequest(icmp_sock, &src, &dest);
-  printf("Sent ICMP echo-request to %s\n", phost);
+
+  printf("Sent ICMP echo-request to %s\n", target_host);
   fflush(stdout);
   return 0;
 }
