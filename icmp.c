@@ -11,15 +11,44 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
-
-
 #include <sys/socket.h>
 #include <sys/fcntl.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
-#include "packet.h"
-const int one = 1;
+//#include "packet.h"
+unsigned const int one = 1;
+
+struct icmp_packet_t {
+  uint8_t   type, code;
+  uint16_t  checksum, identifier, seq;
+};
+
+
+struct ip_packet_t {
+        uint8_t   vers_ihl,
+	          tos;
+  
+        uint16_t  pkt_len,
+	          id,
+	          flags_frag_offset;
+
+        uint8_t   ttl,
+	          proto;  // 1 for ICMP                                           
+
+        uint16_t  checksum;
+
+        uint32_t  src_ip,
+	          dst_ip;
+};
+
+#define IPHDR_SIZE  sizeof(struct ip_packet_t)
+#define ICMPHDR_SIZE  sizeof(struct icmp_packet_t)
+
+
+
+
 
 /* Calculate ICMP checksum */
 uint16_t calc_icmp_checksum(uint16_t *data,
