@@ -12,23 +12,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
-#include <sys/types.h>
 
 
-#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/fcntl.h>
-#include <sys/select.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
-
-#include "common.h"
-#include "list.h"
-
-#include "message.h"
-#include "socket.h"
-#include "destination.h"
 #include "packet.h"
 const int one = 1;
 
