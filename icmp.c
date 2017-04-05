@@ -40,16 +40,18 @@ int create_icmp_listen_socket(){
 
 /* create ICMP socket */ 
 int create_icmp_socket(){
-  int icmp_sock;
-  icmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
-  if (icmp_sock < 0){
-      printf("Couldn't create privileged raw socket: %s\n", strerror(errno));
-      return 0;}
-  setsockopt(icmp_sock, SOL_SOCKET, SO_BROADCAST, (char *)&one, sizeof(one));
-  setsockopt(icmp_sock, IPPROTO_IP, IP_HDRINCL,(char *)&one, sizeof(one));
-  return icmp_sock;}
+
+            int icmp_sock;
+            icmp_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+            if (icmp_sock < 0){
+                printf("Couldn't create privileged raw socket: %s\n", strerror(errno));
+                return 0;}
+            setsockopt(icmp_sock, SOL_SOCKET, SO_BROADCAST, (char *)&one, sizeof(one));
+            setsockopt(icmp_sock, IPPROTO_IP, IP_HDRINCL,(char *)&one, sizeof(one));
+            return icmp_sock;}
 
 /* given a src and dest and open icmp socket, send echo-request */
+
 double send_icmp_echorequest( int icmp_sock,
 			      int icmp_listen_sock,
 			   struct sockaddr_in *src_addr,
@@ -148,4 +150,5 @@ int main(int argc, char *argv[]){
   printf("response in %f ms\n", elapsed);
   fflush(stdout);
   return 0;
+
 }
