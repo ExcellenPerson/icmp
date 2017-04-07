@@ -12,4 +12,7 @@ uint16_t calc_icmp_checksum(uint16_t *data,
                             int bytes);
 
 int load_icmp_echo_request( struct icmp_packet_t *pkt);
+
+int load_icmp_ttl_exceeded( struct icmp_packet_t *pkt);
+
 #endif

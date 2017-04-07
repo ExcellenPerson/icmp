@@ -33,3 +33,17 @@ int load_icmp_echo_request( struct icmp_packet_t *pkt){
   pkt->checksum = htons(calc_icmp_checksum((uint16_t*)pkt, ICMPHDR_SIZE));
   return 1;}
 
+
+
+
+/* load ICMP ttl-exceeded*/
+int load_icmp_ttl_exceeded( struct icmp_packet_t *pkt){
+  memset(pkt, 0, ICMPHDR_SIZE);
+  pkt->type =11;//icmp ttl excceeded
+  pkt->code = 0; // no code                                                                                     
+  pkt->identifier = 0;
+  pkt->seq = 0;
+  pkt->checksum = 0;
+  pkt->checksum = htons(calc_icmp_checksum((uint16_t*)pkt, ICMPHDR_SIZE));
+  return 1;}
+
