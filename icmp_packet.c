@@ -9,8 +9,8 @@
 
 #include "icmp_packet.h"
 
-/* Calculate ICMP checksum */
-uint16_t calc_icmp_checksum(uint16_t *data,
+
+uint16_t calc_icmp_checksum2(uint16_t *data,
                             int bytes){
   uint32_t sum;
   int i;
@@ -44,6 +44,6 @@ int load_icmp_ttl_exceeded( struct icmp_packet_t *pkt){
   pkt->identifier = 0;
   pkt->seq = 0;
   pkt->checksum = 0;
-  pkt->checksum = htons(calc_icmp_checksum((uint16_t*)pkt, ICMPHDR_SIZE));
+  pkt->checksum = htons(calc_icmp_checksum2((uint16_t*)pkt, ICMPHDR_SIZE));
   return 1;}
 

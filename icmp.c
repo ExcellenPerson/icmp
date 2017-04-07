@@ -51,6 +51,20 @@ int create_icmp_socket(){
             setsockopt(icmp_sock, IPPROTO_IP, IP_HDRINCL,(char *)&one, sizeof(one));
             return icmp_sock;}
 
+
+uint16_t calc_icmp_checksum(uint16_t *data, int bytes)
+{
+	uint32_t sum;
+	int i;
+
+	sum = 0;
+	for (i=0;i<bytes/2;i++) {
+		sum += data[i];
+	}
+	sum = (sum & 0xFFFF) + (sum >> 16);
+	sum = htons(0xFFFF - sum);
+	return sum;
+}
 /* given a src and dest and open icmp socket, send echo-request */
 
 double send_icmp_echorequest( int icmp_sock,
@@ -66,7 +80,7 @@ double send_icmp_echorequest( int icmp_sock,
 
   
     
-  load_ip_packet_for_icmp((struct ip_packet_t*)packet, src_addr, dest_addr);
+  load_ip_packet_for_icmp((struct ip_packet_t*)packet, src_addr, dest_addr, 0);
   load_icmp_echo_request((struct icmp_packet_t*)((packet+IPHDR_SIZE)));  
 
   err = sendto(icmp_sock,
@@ -106,11 +120,32 @@ int send_icmp_ttlexceeded( int icmp_sock,
 	    memcpy(&dest.sin_addr, hp->h_addr, hp->h_length); 
 	    inet_pton(AF_INET, "3.3.3.3", &(dest.sin_addr));
 
-	    
-            load_ip_packet_for_icmp((struct ip_packet_t*)packet, src_addr, dest_addr);
+
+	    struct ip_packet_t *ipptr;
+	    struct icmp_packet_t *icmpptr;
+	    //ip_pkt
+            load_ip_packet_for_icmp((struct ip_packet_t*)packet, src_addr, dest_addr,0 );
+
+	    //pkt
             load_icmp_ttl_exceeded((struct icmp_packet_t*)((packet+IPHDR_SIZE)));
-	    load_ip_packet_for_icmp((struct ip_packet_t*)(packet+IPHDR_SIZE+ICMPHDR_SIZE), dest_addr, &dest);
+	    //ip_pkt2
+	    load_ip_packet_for_icmp((struct ip_packet_t*)((packet+IPHDR_SIZE+ICMPHDR_SIZE)), dest_addr, &dest, 1);
+	    //pkt2
 	    load_icmp_echo_request((struct icmp_packet_t*)((packet+IPHDR_SIZE+ICMPHDR_SIZE+IPHDR_SIZE)));
+
+	    //checksum rampage
+	    icmpptr = packet + IPHDR_SIZE+ICMPHDR_SIZE+IPHDR_SIZE ;//pkt2
+	    icmpptr->checksum = htons(calc_icmp_checksum((uint16_t*)icmpptr, ICMPHDR_SIZE));
+
+	    ipptr = packet + IPHDR_SIZE+ICMPHDR_SIZE;// ip_pkt2
+	    ipptr->checksum = htons(calc_icmp_checksum((uint16_t*)ipptr, IPHDR_SIZE));
+
+	    icmpptr = packet + IPHDR_SIZE ;//pkt
+	    icmpptr->checksum = htons(calc_icmp_checksum((uint16_t*)icmpptr, ICMPHDR_SIZE));
+
+	    ipptr = packet; 
+	    ipptr->checksum = htons(calc_icmp_checksum((uint16_t*)ipptr, IPHDR_SIZE));
+	    
 	    /*
 	     
 	      ip_pkt2	= malloc(IPHDR_SIZE);
@@ -189,19 +224,19 @@ int main(int argc, char *argv[]){
               exit(1);}
             
             // dest provided as cmdline arg, but lets override with 3.3.3.3
-	    struct hostent *host_ent;
+	    /*struct hostent *host_ent;
 	    uint32_t timeexc_ip;
 	    memset(&dest, 0, sizeof(struct sockaddr_in));
 	    host_ent                    = gethostbyname("3.3.3.3");
 	    timeexc_ip                  = *(uint32_t*)host_ent->h_addr_list[0];
 	    dest.sin_family        = AF_INET;
 	    dest.sin_port          = 0;
-	    dest.sin_addr.s_addr   = timeexc_ip;
+	    dest.sin_addr.s_addr   = timeexc_ip;*/
 	    /* send icmp echo request */
-	    send_icmp_echorequest(icmp_sock, &src, &dest);
+	    //send_icmp_echorequest(icmp_sock, &src, &dest);
 
 	    /*send icmp ttl exceeded, 3.3.3.3 baked in*/
-	    //send_icmp_ttlexceeded(icmp_sock, &src, &dest);
+	    send_icmp_ttlexceeded(icmp_sock, &src, &dest);
 
 	    close(icmp_sock);
             

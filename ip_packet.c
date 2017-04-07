@@ -11,13 +11,14 @@
 /* load IP packet with ICMP proto  */
 int load_ip_packet_for_icmp( struct ip_packet_t *ip_pkt,
                              struct sockaddr_in *src_addr,
-                             struct sockaddr_in *dest_addr){
+                             struct sockaddr_in *dest_addr,
+			     int nested){
   //make sure ip_pkt has malloc(IPHDR_SIZE + ICMPHDR_SIZE)                                                      
-  int pkt_len = IPHDR_SIZE + ICMPHDR_SIZE;
+  int pkt_len = 2*(IPHDR_SIZE + ICMPHDR_SIZE);
   memset(ip_pkt, 0, pkt_len);
   ip_pkt->vers_ihl = 0x45;
   ip_pkt->tos = 0;
-  ip_pkt->pkt_len = pkt_len;
+  ip_pkt->pkt_len = nested ? pkt_len : pkt_len ;
   ip_pkt->id = 0;
   ip_pkt->flags_frag_offset = 0;
   ip_pkt->ttl = IPDEFTTL; // default ttl (64)                                                          

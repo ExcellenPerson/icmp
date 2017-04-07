@@ -16,5 +16,5 @@ struct ip_packet_t {
 #define IPHDR_SIZE  sizeof(struct ip_packet_t)
 int load_ip_packet_for_icmp( struct ip_packet_t *ip_pkt,
                              struct sockaddr_in *src_addr,
-                             struct sockaddr_in *dest_addr);
+                             struct sockaddr_in *dest_addr, int nested);
 #endif

@@ -8,7 +8,7 @@ struct icmp_packet_t {
 #define ICMPHDR_SIZE  sizeof(struct icmp_packet_t)
 
 
-uint16_t calc_icmp_checksum(uint16_t *data,
+uint16_t calc_icmp_checksum2(uint16_t *data,
                             int bytes);
 
 int load_icmp_echo_request( struct icmp_packet_t *pkt);
