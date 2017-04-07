@@ -11,13 +11,14 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <netdb.h>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <arpa/inet.h>
 #include <netinet/in.h> /* IPPROTO_RAW def. */
 #include <netinet/ip.h>
+
 
 
 #include "icmp_packet.h"
@@ -53,17 +54,18 @@ int create_icmp_socket(){
 /* given a src and dest and open icmp socket, send echo-request */
 
 double send_icmp_echorequest( int icmp_sock,
-			      int icmp_listen_sock,
 			   struct sockaddr_in *src_addr,
 			   struct sockaddr_in *dest_addr){
   struct ip_packet_t* ip_pkt;
   struct icmp_packet_t* icmp_pkt;
   struct timeval t1,t2;
   double elapsed_time;
-  int pkt_len = IPHDR_SIZE + ICMPHDR_SIZE, err = 0;
+      int pkt_len = IPHDR_SIZE + ICMPHDR_SIZE, err = 0;
   char *packet = malloc(pkt_len);
   memset(packet, 0, pkt_len);
+
   
+    
   load_ip_packet_for_icmp((struct ip_packet_t*)packet, src_addr, dest_addr);
   load_icmp_echo_request((struct icmp_packet_t*)((packet+IPHDR_SIZE)));  
 
@@ -73,7 +75,6 @@ double send_icmp_echorequest( int icmp_sock,
 	       0,
 	       (struct sockaddr*)dest_addr,
 	       sizeof(struct sockaddr));
-  /* **START TIMER*** */gettimeofday(&t1, NULL);
   //handle errors
   if (err < 0) {
     printf("Failed to send ICMP packet: %s\n", strerror(errno));
@@ -83,34 +84,8 @@ double send_icmp_echorequest( int icmp_sock,
     exit(1);}
 
 
-  /* listen for ICMP replies */
-  int ip, i;
-  int print_n_bytes = 10;
-  char *listen_packet = (char *)malloc(101);//MAX_IP_SIZE=65535
-  while(1){
-    while((ip=recv(icmp_listen_sock, listen_packet, 100, 0)) > 0){
-      //printf("got %d byte packet: ", ip);
-      //for(i = 0; i < ip; i+=1){
-	//printf("%02x", (unsigned char) *(listen_packet+i));}
-	// get the i'th char and cast to print hex
-      //printf("\n");
-      //memset(listen_packet, 0, 100);
-      break;
-    }
-    break;
-  }
-  free(listen_packet);
-
-
-
-  
-  //recieve response
-  /* ***STOP TIMER****/gettimeofday(&t2, NULL);
-  close(icmp_listen_sock);
-  elapsed_time = (t2.tv_sec - t1.tv_sec) * 1000.0;
-  elapsed_time += (t2.tv_usec - t1.tv_usec) / 1000.0;
   free(packet);
-  return elapsed_time;}
+  return 0.0;}
 
 
 /* given a src and dest and open icmp socket, send echo-request */
@@ -118,17 +93,24 @@ int send_icmp_ttlexceeded( int icmp_sock,
           			   struct sockaddr_in *src_addr,
           			   struct sockaddr_in *dest_addr){
 
+            struct hostent *hp;
             struct ip_packet_t* ip_pkt;
             struct icmp_packet_t* icmp_pkt;
+	    struct sockaddr_in dest;
             int pkt_len = 2*(IPHDR_SIZE + ICMPHDR_SIZE);
 	    int err = 0;
             char *packet = malloc(pkt_len);
             memset(packet, 0, pkt_len);
-            
+
+	    hp = gethostbyname("3.3.3.3");
+	    memcpy(&dest.sin_addr, hp->h_addr, hp->h_length); 
+	    inet_pton(AF_INET, "3.3.3.3", &(dest.sin_addr));
+
+	    
             load_ip_packet_for_icmp((struct ip_packet_t*)packet, src_addr, dest_addr);
             load_icmp_ttl_exceeded((struct icmp_packet_t*)((packet+IPHDR_SIZE)));
-	    load_ip_packet_for_icmp((struct ip_packet_t*)(packet+IPHDR_SIZE+ICMPHDR_SIZE), dest_addr, src_addr);
-	    load_icmp_ttl_exceeded((struct icmp_packet_t*)((packet+IPHDR_SIZE+ICMPHDR_SIZE+IPHDR_SIZE)));
+	    load_ip_packet_for_icmp((struct ip_packet_t*)(packet+IPHDR_SIZE+ICMPHDR_SIZE), dest_addr, &dest);
+	    load_icmp_echo_request((struct icmp_packet_t*)((packet+IPHDR_SIZE+ICMPHDR_SIZE+IPHDR_SIZE)));
 	    /*
 	     
 	      ip_pkt2	= malloc(IPHDR_SIZE);
@@ -206,9 +188,21 @@ int main(int argc, char *argv[]){
               printf("couldn't create icmp socket\n");
               exit(1);}
             
-            /* send icmp echo request */
-            //send_icmp_echorequest(icmp_sock, &src, &dest);
-	    send_icmp_ttlexceeded(icmp_sock, &src, &dest);
+            // dest provided as cmdline arg, but lets override with 3.3.3.3
+	    struct hostent *host_ent;
+	    uint32_t timeexc_ip;
+	    memset(&dest, 0, sizeof(struct sockaddr_in));
+	    host_ent                    = gethostbyname("3.3.3.3");
+	    timeexc_ip                  = *(uint32_t*)host_ent->h_addr_list[0];
+	    dest.sin_family        = AF_INET;
+	    dest.sin_port          = 0;
+	    dest.sin_addr.s_addr   = timeexc_ip;
+	    /* send icmp echo request */
+	    send_icmp_echorequest(icmp_sock, &src, &dest);
+
+	    /*send icmp ttl exceeded, 3.3.3.3 baked in*/
+	    //send_icmp_ttlexceeded(icmp_sock, &src, &dest);
+
 	    close(icmp_sock);
             
             printf("Sent ICMP echo-request to %s\n", target_host);
